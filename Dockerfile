@@ -1,9 +1,9 @@
 FROM felddy/foundryvtt:13
 
-# Install OpenSSH
+# Install OpenSSH and Supervisord
 USER root
 RUN apt-get update && \
-    apt-get install -y openssh-server && \
+    apt-get install -y openssh-server supervisor && \
     rm -rf /var/lib/apt/lists/*
 
 # Create privilege separation directory for SSH
@@ -22,8 +22,12 @@ RUN echo "PasswordAuthentication no" >> /etc/ssh/sshd_config && \
     echo "PermitRootLogin no" >> /etc/ssh/sshd_config && \
     echo "AllowUsers foundry" >> /etc/ssh/sshd_config
 
+# Configure Supervisord
+RUN mkdir -p /etc/supervisor/conf.d
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
 # Expose both Foundry and SSH ports
 EXPOSE 30000 22
 
-# Use CMD to run OpenSSH alongside Foundry
-CMD ["/usr/sbin/sshd", "-D"]
+# Start Supervisord to manage both processes
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
