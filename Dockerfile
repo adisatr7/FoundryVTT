@@ -2,10 +2,15 @@ FROM felddy/foundryvtt:13
 
 # Install OpenSSH
 USER root
-RUN apk add --no-cache openssh
+RUN apt-get update && \
+    apt-get install -y openssh-server && \
+    rm -rf /var/lib/apt/lists/*
+
+# Create privilege separation directory for SSH
+RUN mkdir -p /run/sshd
 
 # Create an SSH user (non-root)
-RUN adduser -D foundry && \
+RUN adduser --disabled-password --gecos "" foundry && \
     mkdir -p /home/foundry/.ssh && \
     echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFBXxUTYlsytb0eDSzU3ZCoUxSgpbZuYmAlN2U/9OmFp r7@lumina" > /home/foundry/.ssh/authorized_keys && \
     chown -R foundry:foundry /home/foundry/.ssh && \
@@ -20,7 +25,5 @@ RUN echo "PasswordAuthentication no" >> /etc/ssh/sshd_config && \
 # Expose both Foundry and SSH ports
 EXPOSE 30000 22
 
-# Start both processes with supervisord or custom script
-COPY start.sh /start.sh
-RUN chmod +x /start.sh
-ENTRYPOINT ["/start.sh"]
+# Use CMD to run OpenSSH alongside Foundry
+CMD ["/usr/sbin/sshd", "-D"]
